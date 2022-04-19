@@ -24,12 +24,16 @@ contract Jack is Initializable, ERC721AUpgradeable, OwnableUpgradeable{
         require(tx.origin == msg.sender, "Jack :: Cannot be called by a contract");
         _;
     }
-    event msgs(string);
 
-    function mint(address addr,uint256 _quantity) external{
+    modifier callerIsBox() {
+        require(tx.origin == box_address, "Jack :: can only be called by Box contract");
+        _;
+    }
+
+    function mint(address addr,uint256 _quantity) external callerIsBox{
         Box box = Box(box_address);
         require((box.tokensBurntBy(addr)) != 0, "Jack :: you did not burn any BOX token");
-        require((box.tokensBurntBy(addr)) >= (_quantity + _numberMinted(addr)), "Jack :: Beyond beyond burnt quantity");
+        require((box.tokensBurntBy(addr)) >= (_quantity + _numberMinted(addr)), "Jack :: Burning Beyond minted quantity");
         require((totalSupply() + _quantity) <= MAX_SUPPLY, "Jack :: Beyond Max Supply");
         _safeMint(addr, _quantity);
     }
@@ -52,29 +56,6 @@ contract Jack is Initializable, ERC721AUpgradeable, OwnableUpgradeable{
 
     function getBoxAddress() external view returns (address){
         return box_address;
-    }
-
-    function tokenIdsOfOwner(address owner) public view returns (uint256[] memory) {
-        unchecked {
-            uint256 tokenIdsIdx;
-            address currOwnershipAddr;
-            uint256 tokenIdsLength = balanceOf(owner);
-            uint256[] memory tokenIds = new uint256[](tokenIdsLength);
-            TokenOwnership memory ownership;
-            for (uint256 i = _startTokenId(); tokenIdsIdx != tokenIdsLength; ++i) {
-                ownership = _ownerships[i];
-                if (ownership.burned) {
-                    continue;
-                }
-                if (ownership.addr != address(0)) {
-                    currOwnershipAddr = ownership.addr;
-                }
-                if (currOwnershipAddr == owner) {
-                    tokenIds[tokenIdsIdx++] = i;
-                }
-            }
-            return tokenIds;
-        }
     }
 
     function tokensMintedtBy(address owner) external view returns (uint256) {

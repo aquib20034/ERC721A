@@ -28,6 +28,10 @@ module.exports = {
    defaultNetwork: "hardhat",
    networks: {
       hardhat: {}
+   },
+   mocha: {
+     timeout: 400000000
    }
+ 
 }
 

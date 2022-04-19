@@ -14,8 +14,8 @@ contract Box is Initializable, ERC721AUpgradeable, ERC721ABurnableUpgradeable, O
     uint256 public constant MAX_SUPPLY = 7777;
     uint256 public constant MAX_PUBLIC_MINT = 10;
     uint256 public constant MAX_WHITELIST_MINT = 3;
-    uint256 public constant PUBLIC_SALE_PRICE = .009 ether;
-    uint256 public constant WHITELIST_SALE_PRICE = .002 ether;
+    uint256 public constant PUBLIC_SALE_PRICE = .00009 ether;
+    uint256 public constant WHITELIST_SALE_PRICE = .00002 ether;
 
     bool public isRevealed;
     bool public publicSale;
@@ -24,15 +24,15 @@ contract Box is Initializable, ERC721AUpgradeable, ERC721ABurnableUpgradeable, O
     string private baseTokenUri;
     address private jack_address;
 
-    // mapping(address => uint256) private adressMint;
-    // mapping(address => uint256) private addressBurn;
+    mapping(address => uint256) private mintAddress;
+    // mapping(address => uint256) private publicMintAddress;
+    // mapping(address => uint256) private whiteListMintAddress;
     
     function initialize() external initializer{
         __ERC721A_init("Box","BOX");
         __Ownable_init();
         __ERC721ABurnable_init();
     }
-
 
     modifier callerIsUser() {
         require(tx.origin == msg.sender, "Box :: Cannot be called by a contract");
@@ -42,24 +42,26 @@ contract Box is Initializable, ERC721AUpgradeable, ERC721ABurnableUpgradeable, O
     function mint(uint256 _quantity) external payable callerIsUser{
         require(publicSale, "Box :: Not Yet Active.");
         require((totalSupply() + _quantity) <= MAX_SUPPLY, "Box :: Beyond Max Supply");
-        require(( (_numberMinted(msg.sender)) +_quantity) <= MAX_PUBLIC_MINT, "Box :: Already minted 10 times!");
-        // require((adressMint[msg.sender] +_quantity) <= MAX_PUBLIC_MINT, "Box :: Already minted 10 times!");
+        // require((publicMintAddress[msg.sender] +_quantity) <= MAX_PUBLIC_MINT, "Box :: Already minted 10 times!");
+        require(_quantity <= MAX_PUBLIC_MINT, "Box :: Max 10 NFT per transaction");
         require(msg.value >= (PUBLIC_SALE_PRICE * _quantity), "Box :: Payment is below the price ");
 
-        // adressMint[msg.sender] += _quantity;
+        // publicMintAddress[msg.sender] += _quantity;
+        mintAddress[msg.sender] += _quantity;
         _safeMint(msg.sender, _quantity);
     }
 
     function whitelistMint(bytes32[] memory _merkleProof, uint256 _quantity) external payable callerIsUser{
         require(whiteListSale, "Box :: Minting is on Pause");
         require((totalSupply() + _quantity) <= MAX_SUPPLY, "Box :: Cannot mint beyond max supply");
-        // require((adressMint[msg.sender] + _quantity)  <= MAX_WHITELIST_MINT, "Box :: Cannot mint beyond whitelist max mint!");
-        require(( (_numberMinted(msg.sender)) + _quantity)  <= MAX_WHITELIST_MINT, "Box :: Cannot mint beyond whitelist max mint!");
+        // require((whiteListMintAddress[msg.sender] + _quantity)  <= MAX_WHITELIST_MINT, "Box :: Cannot mint beyond whitelist max mint!");
+        require(_quantity <= MAX_WHITELIST_MINT, "Box :: Max 3 NFT per transaction");
         require(msg.value >= (WHITELIST_SALE_PRICE * _quantity), "Box :: Payment is below the price");
         bytes32 sender = keccak256(abi.encodePacked(msg.sender));
         require(MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, sender), "Box :: You are not whitelisted");
 
-        // adressMint[msg.sender] += _quantity;
+        // whiteListMintAddress[msg.sender] += _quantity;
+        mintAddress[msg.sender] += _quantity;
         _safeMint(msg.sender, _quantity);
     }
     
@@ -71,7 +73,6 @@ contract Box is Initializable, ERC721AUpgradeable, ERC721ABurnableUpgradeable, O
         baseTokenUri = _baseTokenUri;
     }
    
-
     function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner{
         merkleRoot = _merkleRoot;
     }
@@ -124,36 +125,26 @@ contract Box is Initializable, ERC721AUpgradeable, ERC721ABurnableUpgradeable, O
         jack_address = _jack_address;
     }
     
-    
     function getJackAddress() external view returns (address){
         return jack_address;
     }
 
-    // function burn(uint256 tokenId) public override callerIsUser{
-    //      require( _exists(tokenId), "Box :: Token not minted yet or burnt");
-    //     _burn(tokenId, true);
-    // }
-
-    function burn(uint256 _quantity) public override callerIsUser{
-
-        uint256[] memory tokenIds = tokenIdsOfOwner(msg.sender);
+    function burnBatch(uint256 _quantity, uint256[] memory tokenIds)  external callerIsUser{
         require((balanceOf(msg.sender)) >= (_quantity), "Box :: Cannot burned beyond minted tokens");
         for (uint256 i = 0; i < _quantity; i++) {
-            // require(ownerOf(tokenIds[i]) ==  (msg.sender) , "Box :: You are not the owner of this token");
             _burn(tokenIds[i], true);
         }
-
         mintJack(_quantity);
     }
-   
+
     function tokensBurntBy(address owner) external view returns (uint256) {
         return _numberBurned(owner);
     }
 
+    // it includes public mint + whitelist mint token
     function tokensMintedtBy(address owner) external view returns (uint256) {
         return _numberMinted(owner);
     }
-
 
     function withdraw() external onlyOwner{
         payable(msg.sender).transfer(address(this).balance);
