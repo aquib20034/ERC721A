@@ -1,4 +1,4 @@
-# Jack-in-the-box-smart-contracts
+# ERC721A - smart-contracts
 It is an upgradeable ERC721A smart contact based on openzepplin (A library for secure smart contract development) and chiru-labs (A library for the implementation of ERC721A). ERC721A is an improved implementation of the ERC721 Non-Fungible Token Standard that supports minting multiple tokens for close to the cost of one.
 
 
